@@ -1,0 +1,5 @@
+ALERT: Multiple failed logins for user jsmith
+Source IP: 203.0.113.7 at 2026-11-07 02:14:09
+Followed by a successful login from 198.51.100.4
+Outbound connection to 8.8.8.8 observed
+Repeat attempt from 203.0.113.7 at 02:19:40
