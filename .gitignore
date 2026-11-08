@@ -3,3 +3,4 @@ __pycache__/
 .env
 *.env
 report_*.txt
+.claude/

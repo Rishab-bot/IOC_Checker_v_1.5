@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>IOC Checker</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-view="start">
+  <!--
+  THESIS: A triage console that opens on one calm question (paste the alert) and then gives each IP room to be investigated; it refuses the cramped sidebar report and the marketing dashboard.
+  OWN-WORLD: Night-shift navy (#0a111e to #1a2b45) with a faint blue dot-field horizon on the start screen, one working blue (#1f6feb), signal red, amber and green verdict chips with drawn icons; system UI sans, Cascadia Mono for IPs, alerts and queries.
+  STORY: The analyst pastes or uploads an alert, sees how bad it is worst first, triages in the side panel, and opens a full investigation page for the IPs that matter.
+  FIRST VIEWPORT: Top bar with Analyze, History and Settings (Soon) and the Demo or Live badge; centred crosshair-shield mark, IOC Checker title, input card with Paste and Upload tabs, examples and Analyze; a three-part truthful feature strip.
+  FORM: User-pinned mockup, which overrides the roll; seed 866d765c.
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+  -->
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-mark" viewBox="0 0 24 24"><path d="M12 2.8l7.2 3v5.6c0 4.6-3 7.8-7.2 9.4-4.2-1.6-7.2-4.8-7.2-9.4V5.8L12 2.8z"/><circle cx="12" cy="11.6" r="3.3"/><path d="M12 6.9v1.9M12 14.4v1.9M7.3 11.6h1.9M14.8 11.6h1.9"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7.5 3.2v5.6c0 4.6-3.1 7.9-7.5 9.4-4.4-1.5-7.5-4.8-7.5-9.4V6.2L12 3z"/></symbol>
+    <symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M12 3l7.5 3.2v5.6c0 4.6-3.1 7.9-7.5 9.4-4.4-1.5-7.5-4.8-7.5-9.4V6.2L12 3z"/><path d="M8.8 12.2l2.2 2.2 4.2-4.4"/></symbol>
+    <symbol id="i-octagon-x" viewBox="0 0 24 24"><path d="M8.3 3h7.4L21 8.3v7.4L15.7 21H8.3L3 15.7V8.3L8.3 3z"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></symbol>
+    <symbol id="i-triangle" viewBox="0 0 24 24"><path d="M10.3 4.2L2.6 17.6A2 2 0 0 0 4.3 20.6h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-slash" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6 18L18 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5L8 5.5z"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4"/><path d="M7 8.5l5-4.5 5 4.5"/><path d="M5 20h14"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 6.6l1.7 1.7M18.1 15.7l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.2 17.4l1.7-1.7M18.1 8.3l1.7-1.7"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2.5L4.5 13.5H11l-1 8 8.5-11H12l1-8z"/></symbol>
+    <symbol id="i-sort" viewBox="0 0 24 24"><path d="M4 6h11M4 12h8M4 18h5"/><path d="M18 5v14"/><path d="M15 16l3 3 3-3"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1L5 10.5l5.1-1.9L12 3.5z"/><path d="M18.5 16v4M16.5 18h4"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.5l8.5 4.5-8.5 4.5L3.5 8 12 3.5z"/><path d="M3.5 12.5L12 17l8.5-4.5"/><path d="M3.5 16.5L12 21l8.5-4.5"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="M8.5 7.5L4 12l4.5 4.5M15.5 7.5L20 12l-4.5 4.5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <a class="brand" href="#/">
+      <svg class="icon brand-mark"><use href="#i-mark"/></svg>
+      <span>IOC Checker</span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a class="nav-item" id="nav-analyze" href="#/" aria-current="page"><svg class="icon"><use href="#i-play"/></svg>Analyze</a>
+      <span class="nav-item is-soon" aria-disabled="true" title="History is coming soon"><svg class="icon"><use href="#i-clock"/></svg>History<span class="soon">Soon</span></span>
+      <span class="nav-item is-soon" aria-disabled="true" title="Settings are coming soon"><svg class="icon"><use href="#i-gear"/></svg>Settings<span class="soon">Soon</span></span>
+    </nav>
+    <div class="topbar-end">
+      <p id="mode" class="mode" data-mode="unknown" title=""><span class="dot" aria-hidden="true"></span><span id="mode-label">Connecting…</span></p>
+    </div>
+  </header>
+
+  <!-- ===================== Start ===================== -->
+  <section id="view-start" class="view view-start" aria-labelledby="hero-title">
+    <canvas id="horizon" class="horizon" aria-hidden="true"></canvas>
+    <div class="hero">
+      <div class="hero-mark-wrap" aria-hidden="true">
+        <svg class="icon hero-mark"><use href="#i-mark"/></svg>
+      </div>
+      <h1 id="hero-title" class="hero-title">IOC <span>Checker</span></h1>
+      <p class="hero-lede">Investigate the IPv4 addresses in any alert, SIEM payload or log with AbuseIPDB reputation and validated Gemini analysis.</p>
+
+      <form id="composer" class="composer">
+        <div class="input-tabs" role="tablist" aria-label="How to provide the alert">
+          <button type="button" role="tab" id="itab-paste" aria-controls="ipane-paste" aria-selected="true">
+            <svg class="icon"><use href="#i-file"/></svg>Paste payload
+          </button>
+          <button type="button" role="tab" id="itab-upload" aria-controls="ipane-upload" aria-selected="false" tabindex="-1">
+            <svg class="icon"><use href="#i-upload"/></svg>Upload file
+          </button>
+        </div>
+
+        <div id="ipane-paste" class="input-pane" role="tabpanel" aria-labelledby="itab-paste">
+          <label for="payload" class="visually-hidden">Alert, SIEM payload or log lines</label>
+          <textarea id="payload" rows="5" spellcheck="false" autocomplete="off"
+            placeholder="Paste a SIEM payload, log lines or any security event. IOC Checker finds every IPv4 address in it."></textarea>
+          <p id="loaded-note" class="loaded-note" hidden></p>
+        </div>
+
+        <div id="ipane-upload" class="input-pane" role="tabpanel" aria-labelledby="itab-upload" hidden>
+          <div id="dropzone" class="dropzone">
+            <svg class="icon dropzone-mark"><use href="#i-upload"/></svg>
+            <p class="dropzone-title">Drop a file here or <label for="file-input" class="link-label">choose one</label></p>
+            <p class="fineprint">A .txt, .log, .json, .csv or .xml file up to 95 KB. It is read in your browser and goes into the payload box, so you can check it before pressing Analyze.</p>
+            <input id="file-input" class="visually-hidden" type="file" accept=".txt,.log,.json,.csv,.xml,text/plain,application/json,text/csv">
+          </div>
+        </div>
+
+        <div class="composer-foot">
+          <div class="samples" role="group" aria-label="Load an example alert">
+            <span class="samples-label">Examples</span>
+            <button type="button" class="chip" data-sample="sentinel">Sentinel JSON <span>5 IPs</span></button>
+            <button type="button" class="chip" data-sample="splunk">Splunk event <span>3 IPs</span></button>
+            <button type="button" class="chip" data-sample="qradar">QRadar log <span>3 IPs</span></button>
+            <button type="button" class="chip" data-sample="firewall">Firewall log <span>4 IPs</span></button>
+          </div>
+          <div class="composer-action">
+            <button id="analyze" class="btn btn-primary btn-lg" type="submit">
+              <svg class="icon"><use href="#i-play"/></svg><span>Analyze</span>
+            </button>
+          </div>
+        </div>
+        <p class="cost" id="cost-note"></p>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+      </form>
+
+      <ul class="features">
+        <li>
+          <svg class="icon"><use href="#i-bolt"/></svg>
+          <div><p class="feature-title">Reputation for every IP</p><p class="feature-text">AbuseIPDB checks up to 50 public IPs per alert</p></div>
+        </li>
+        <li>
+          <svg class="icon"><use href="#i-shield-check"/></svg>
+          <div><p class="feature-title">Validated AI analysis</p><p class="feature-text">Every Gemini answer is checked before it is shown</p></div>
+        </li>
+        <li>
+          <svg class="icon"><use href="#i-sort"/></svg>
+          <div><p class="feature-title">Worst first</p><p class="feature-text">Sorted by severity in code, never by the AI</p></div>
+        </li>
+      </ul>
+
+      <p id="resume" class="resume" hidden><a href="#/results"><svg class="icon"><use href="#i-arrow-right"/></svg><span id="resume-label">Back to your last results</span></a></p>
+    </div>
+  </section>
+
+  <!-- ===================== Results ===================== -->
+  <section id="view-results" class="view view-results" hidden aria-labelledby="results-title">
+    <div class="workspace">
+      <main class="main">
+        <div class="results-bar">
+          <a class="btn btn-quiet" href="#/"><svg class="icon"><use href="#i-arrow-left"/></svg>New analysis</a>
+          <p id="results-source" class="results-source"></p>
+          <div class="export" id="export" role="group" aria-label="Export results">
+            <button id="export-csv" class="btn btn-quiet" type="button"><svg class="icon"><use href="#i-download"/></svg>CSV</button>
+            <button id="export-json" class="btn btn-quiet" type="button">JSON</button>
+          </div>
+        </div>
+
+        <section id="summary" class="summary" aria-live="polite"></section>
+
+        <section class="results">
+          <header class="results-head">
+            <h2 id="results-title"><svg class="icon"><use href="#i-layers"/></svg>Results</h2>
+            <p class="results-hint" id="results-hint" hidden>Arrow keys move through results · Enter opens the investigation</p>
+          </header>
+
+          <div id="results-empty" class="empty" hidden></div>
+
+          <div class="table-wrap">
+            <table id="results-table">
+              <colgroup>
+                <col class="col-ip"><col class="col-verdict"><col class="col-score"><col class="col-network"><col class="col-summary"><col class="col-go">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">Indicator</th>
+                  <th scope="col">Verdict</th>
+                  <th scope="col" class="num"><span class="th-extra">Abuse </span>score</th>
+                  <th scope="col" class="c-network">Network</th>
+                  <th scope="col" class="c-summary">Summary</th>
+                  <th scope="col"><span class="visually-hidden">Open</span></th>
+                </tr>
+              </thead>
+              <tbody id="results-body"></tbody>
+            </table>
+          </div>
+
+          <details id="skipped" class="skipped" hidden>
+            <summary><svg class="icon chev"><use href="#i-chevron-right"/></svg><span id="skipped-summary"></span></summary>
+            <ul id="skipped-list"></ul>
+          </details>
+        </section>
+      </main>
+
+      <div id="scrim" class="scrim" hidden></div>
+
+      <aside id="panel" class="panel" aria-label="Quick triage">
+        <div id="panel-empty" class="panel-empty">
+          <svg class="icon panel-empty-mark"><use href="#i-shield"/></svg>
+          <p class="empty-title">Nothing selected</p>
+          <p>Pick a result to triage it here, then open its full investigation.</p>
+        </div>
+        <div id="panel-detail" class="panel-detail" hidden></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== Investigation ===================== -->
+  <section id="view-investigate" class="view view-investigate" hidden aria-labelledby="inv-ip">
+    <div class="inv">
+      <div class="inv-top">
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <a href="#/results"><svg class="icon"><use href="#i-arrow-left"/></svg>Results</a>
+          <span aria-hidden="true">/</span>
+          <span id="crumb-ip" class="mono" aria-current="page"></span>
+        </nav>
+        <div class="inv-steps">
+          <button id="inv-prev" class="btn btn-quiet" type="button"><svg class="icon"><use href="#i-arrow-left"/></svg><span>Previous</span></button>
+          <span id="inv-position" class="inv-position"></span>
+          <button id="inv-next" class="btn btn-quiet" type="button"><span>Next</span><svg class="icon"><use href="#i-arrow-right"/></svg></button>
+        </div>
+      </div>
+      <div id="inv-body" class="inv-body"></div>
+    </div>
+  </section>
+</body>
+</html>

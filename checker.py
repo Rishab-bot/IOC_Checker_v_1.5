@@ -3,6 +3,9 @@ import extractor
 import lookup
 import verdict
 
+# AbuseIPDB fields copied into each result, so the web page can show them without another lookup.
+REPUTATION_KEYS = ["score", "country", "isp", "reports", "last_reported", "whitelisted"]
+
 
 def result_sort_key(result):
     """Sort key for results: errors go last, otherwise higher severity comes first."""
@@ -12,13 +15,20 @@ def result_sort_key(result):
 
 
 def check_ip(ip, lookup_fn, verdict_fn):
-    """Look up one IP and, if that worked, get a verdict. Return a dict with ip, verdict, severity, reason, error."""
+    """Look up one IP and, if that worked, get a verdict.
+
+    Return a dict with ip, verdict, severity, reason and error, plus the AbuseIPDB fields in REPUTATION_KEYS.
+    """
     result = {"ip": ip, "verdict": None, "severity": None, "reason": None, "error": None}
+    result.update({key: None for key in REPUTATION_KEYS})
 
     lookup_result = lookup_fn(ip)
     if lookup_result["error"] is not None:
         result["error"] = f"lookup failed: {lookup_result['error']}"
         return result
+
+    for key in REPUTATION_KEYS:
+        result[key] = lookup_result.get(key)
 
     answer = verdict_fn(lookup_result)
     if answer["error"] is not None:

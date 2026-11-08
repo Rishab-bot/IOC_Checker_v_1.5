@@ -124,8 +124,16 @@ def test_failed_lookup():
         "severity": None,
         "reason": None,
         "error": "lookup failed: rate limit reached",
+        "score": None,
+        "country": None,
+        "isp": None,
+        "reports": None,
+        "last_reported": None,
+        "whitelisted": None,
     }, failed
     assert judged == ["8.8.8.8"], judged
+    ok = report["results"][0]
+    assert ok["ip"] == "8.8.8.8" and ok["score"] == 0, "a successful lookup's score is passed through"
     assert report["counts"] == {"checked": 2, "failed": 1}, report["counts"]
 
 
