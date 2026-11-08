@@ -8,6 +8,7 @@ const state = {
   token: "",
   model: "",
   maxIps: 50,
+  lookupsLeft: null,     // live lookups the site has left today, or null when there is no site ceiling
   checkId: "",
   source: "",
   results: [],
@@ -197,11 +198,16 @@ function resultFor(ip) {
 async function loadStatus() {
   try {
     const response = await fetch("/status");
+    if (response.status === 401) return location.reload(); // the session ended; the server now shows the sign-in page
     const data = await response.json();
     state.mode = data.mode === "live" ? "live" : "demo";
     state.token = data.insight_token || "";
     state.model = data.insight_model || "";
     state.maxIps = data.max_ips || 50;
+    state.lookupsLeft = typeof data.lookups_left === "number" ? data.lookups_left : null;
+    $("user-chip").textContent = data.user || "";
+    $("user-chip").hidden = !data.user;
+    $("signout").hidden = !data.user;
   } catch {
     state.mode = "offline";
   }
@@ -212,7 +218,9 @@ async function loadStatus() {
   if (state.mode === "live") {
     label("Live mode", "uses your API quota");
     mode.title = `Real AbuseIPDB and Gemini (${state.model}) calls`;
-    $("cost-note").textContent = "Each public IP uses 1 AbuseIPDB lookup and 1 Gemini call";
+    $("cost-note").textContent = state.lookupsLeft === null
+      ? "Each public IP uses 1 AbuseIPDB lookup and 1 Gemini call"
+      : `Each public IP uses 1 AbuseIPDB lookup and 1 Gemini call. The site has ${state.lookupsLeft} live lookups left today.`;
   } else if (state.mode === "demo") {
     label("Demo mode", "made-up results");
     mode.title = "Nothing is sent to AbuseIPDB or Gemini";
@@ -306,6 +314,7 @@ async function runCheck(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
+    if (response.status === 401) return location.reload();
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
 
@@ -891,6 +900,7 @@ async function runInsight(ip) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ip, token: state.token, check: state.checkId }),
     });
+    if (response.status === 401) return location.reload();
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
     state.insights.set(key, data);
@@ -1141,6 +1151,14 @@ document.addEventListener("keydown", (event) => {
 });
 $("export-csv").addEventListener("click", exportCsv);
 $("export-json").addEventListener("click", exportJson);
+$("signout").addEventListener("click", async () => {
+  try {
+    await fetch("/logout", { method: "POST" });
+  } finally {
+    location.hash = "#/";
+    location.reload();
+  }
+});
 window.addEventListener("hashchange", route);
 window.addEventListener("resize", () => {
   if (document.body.dataset.view === "start") drawHorizon();

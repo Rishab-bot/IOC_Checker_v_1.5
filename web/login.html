@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Sign in · IOC Checker</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/login.js" defer></script>
+</head>
+<body class="login-page">
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-mark" viewBox="0 0 24 24"><path d="M12 2.8l7.2 3v5.6c0 4.6-3 7.8-7.2 9.4-4.2-1.6-7.2-4.8-7.2-9.4V5.8L12 2.8z"/><circle cx="12" cy="11.6" r="3.3"/><path d="M12 6.9v1.9M12 14.4v1.9M7.3 11.6h1.9M14.8 11.6h1.9"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <a class="brand" href="/">
+      <svg class="icon brand-mark"><use href="#i-mark"/></svg>
+      <span>IOC Checker</span>
+    </a>
+  </header>
+
+  <main class="login-main">
+    <div class="hero-mark-wrap" aria-hidden="true">
+      <svg class="icon hero-mark"><use href="#i-mark"/></svg>
+    </div>
+    <h1 class="login-title">Sign in to <span>IOC Checker</span></h1>
+    <p class="login-lede">Access is limited to people who were given a login.</p>
+
+    <form id="login-form" class="login-card" autocomplete="on">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="32">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="200">
+      </div>
+      <p id="login-error" class="form-error" role="alert" hidden></p>
+      <button id="login-submit" class="btn btn-primary btn-lg" type="submit"><span>Sign in</span></button>
+      <p class="fineprint">Please use the sample alerts or made-up data. Do not paste real company alerts.</p>
+    </form>
+  </main>
+</body>
+</html>
