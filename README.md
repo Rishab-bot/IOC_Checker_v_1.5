@@ -14,8 +14,9 @@ IOC Checker automates that look-up-and-summarise step for IP addresses, so the a
 - **Full-page investigation.** Double-click a result, press Enter on it, or choose **Investigate** in the panel to open a page for that IP. **Previous** and **Next** (or the arrow keys) move through the results in severity order. **Run deep analysis** adds two parts, and nothing is spent until you click it:
   - **Analyst assessment:** Gemini judges the activity in the alert, not just the IP's reputation, using the AbuseIPDB record and the parts of the alert that mention this IP. It returns an assessment and confidence, the evidence, possible harmless explanations, MITRE ATT&CK techniques, recommended actions, hunting queries (for example KQL for Microsoft Sentinel) and pivots. The reply must match a fixed structure and is validated before it is shown.
   - **The full AbuseIPDB record:** usage type, domain, hostnames, whether it is a Tor exit, distinct reporters, the most reported attack categories and reporter countries, and the 15 most recent reports.
-- **Locked down by design.** The page only listens on your own machine, refuses requests from other websites, and shows everything from AbuseIPDB, alerts and Gemini as plain text.
-- **More offline tests.** `test_insight.py` adds 10 tests for the insight feature, alongside the 7 in `test_checker.py`.
+- **Locked down by design.** By default the page only listens on your own machine, refuses requests from other websites, and shows everything from AbuseIPDB, alerts and Gemini as plain text.
+- **Sign-in and a daily ceiling for a hosted copy.** With `--public-host`, nobody can use the page without a login, and live checks stop at a site-wide daily ceiling of AbuseIPDB lookups so the site can't use up your quota. See [Hosting a copy](#hosting-a-copy-for-other-people). A hosted copy has not been deployed yet.
+- **More offline tests.** `test_insight.py` adds 10 tests for the insight feature and `test_auth.py` adds 15 for sign-in and the ceiling, alongside the 7 in `test_checker.py`.
 
 ### Version 1.5
 
@@ -95,9 +96,11 @@ Deep analysis for one IP
 | `checker.py` | `check_payload` runs the whole pipeline on a block of text and returns the sorted results, the skipped addresses, the number cut and the counts. The lookup and verdict functions can be passed in, which is how the tests run offline. |
 | `insight.py` | `get_assessment` (Gemini with a JSON schema) and `validate_assessment`, plus `alert_excerpts`, which picks the parts of an alert that mention one IP. Uses `gemini-3.5-flash-lite` by default, with a 120-second timeout and no automatic retries, so quota errors show straight away. |
 | `main.py` | Reads `sample_alert.txt`, calls `check_payload`, prints the results and the summary, and writes the report file. |
-| `web_app.py` | A local web server built only on Python's standard library. It serves the page in `web/`, runs checks and deep analyses, and has demo versions of every API call. |
-| `web/` | A single page (`index.html`, `app.js`, `style.css`, `favicon.svg`) with three views: the start screen, the results and the investigation page. It loads no external fonts, scripts or images. |
-| `test_checker.py`, `test_insight.py` | Offline tests using plain `assert` statements and fake API functions. |
+| `web_app.py` | A web server built only on Python's standard library. It serves the page in `web/`, runs checks and deep analyses, has demo versions of every API call, and (for a hosted copy) enforces sign-in and the daily ceiling. |
+| `auth.py` | Password hashing (`hashlib.scrypt`), in-memory sessions, the lockout after repeated wrong passwords, and `DailyCeiling`, which counts live AbuseIPDB lookups per UTC day. |
+| `make_user.py` | Makes a login: a random password, shown once, and the hashed entry for the `IOC_USERS` setting. Nothing is written to disk. |
+| `web/` | A single page (`index.html`, `app.js`, `style.css`, `favicon.svg`) with three views: the start screen, the results and the investigation page, plus the sign-in page (`login.html`, `login.js`). It loads no external fonts, scripts or images. |
+| `test_checker.py`, `test_insight.py`, `test_auth.py` | Offline tests using plain `assert` statements and fake API functions. `test_auth.py` also starts the real server on `127.0.0.1` in demo mode. |
 
 **Why the LLM's replies are validated.** The tool treats every LLM answer as untrusted input. The model might reply in prose, wrap its JSON in a Markdown code fence, leave out a field, or invent a value like `"super-critical"`. `validate_verdict()` first rejects a reply that isn't text at all. It then strips a code fence if there is one, and requires valid JSON forming an object, with all three keys (`verdict`, `severity`, `reason`) and values from the allowed lists. A reply that fails any check is reported as `verdict failed: <reason>` rather than shown as a verdict. The deep-analysis assessment gets the same treatment from `validate_assessment()`.
 
@@ -109,7 +112,8 @@ Other deliberate choices:
 - **Quota goes only where it can tell you something.** Skipped addresses and anything past the 50-address cap are never sent to either service. A deep analysis runs only when you click **Run deep analysis** for one IP. If a key is missing, the tool stops before the first lookup.
 - **Sorting is done in code.** The LLM only labels each address. The order comes from a fixed severity ranking, so the same verdicts always come out in the same order.
 - **The web page is locked down.**
-  - It listens only on `127.0.0.1` and rejects requests from other websites.
+  - By default it listens only on `127.0.0.1` and rejects requests from other websites. A hosted copy answers only to its own host name.
+  - On a hosted copy every page except the sign-in page needs a login. Passwords are stored only as scrypt hashes, the session cookie is `HttpOnly`, `SameSite=Strict` and `Secure`, and 5 wrong passwords from one address lock it out for 15 minutes.
   - Deep-analysis requests need a random token that is new each time the server starts, so another site can't start one and spend your quota.
   - Everything from AbuseIPDB, alerts and Gemini is shown as plain text, never as HTML.
   - In a CSV export, any cell that starts with `=`, `+`, `-` or `@` gets a leading `'`, so a spreadsheet shows it as text instead of running it as a formula.
@@ -141,6 +145,7 @@ Built with Python 3.14 on Windows. In Command Prompt or PowerShell, from the pro
    ```
    python test_checker.py
    python test_insight.py
+   python test_auth.py
    ```
 
 4. Run the command-line checker on `sample_alert.txt`:
@@ -167,6 +172,28 @@ To check a different alert on the command line, replace the contents of `sample_
 
 Report files are git-ignored.
 
+## Hosting a copy for other people
+
+This is built and tested offline, but **not deployed yet**. The server in this repo is Python's standard-library server, which is fine for showing the project to a few people, not for production.
+
+1. Make a login for each person, then keep the printed password to send them separately from the link:
+
+   ```
+   python make_user.py manager
+   ```
+
+2. On the host, set `IOC_USERS` to the printed `name=salt:hash` entries, joined with commas, and set the two API keys as the host's secret settings. Never put keys or `IOC_USERS` in the repo.
+3. Start the server with the host name visitors will use. `PORT` is read from the host's settings:
+
+   ```
+   python web_app.py --live --public-host your-app.example.com
+   python web_app.py --live --public-host your-app.example.com --daily-limit 500   a lower ceiling
+   ```
+
+   It refuses to start with `--public-host` unless `IOC_USERS` holds at least one login.
+
+The **site-wide daily ceiling** is 700 live AbuseIPDB lookups per UTC day by default, which leaves 300 of the free plan's 1,000 for your own use. There are no per-person limits. Once the ceiling is reached, the rest of a running check shows `lookup failed: site daily limit reached`, and new checks and deep analyses are refused until 00:00 UTC. The page shows how many lookups are left. `/healthz` answers `ok` for a host's health check.
+
 ## Limitations
 
 - **IPv4 only.** The tool does not handle IPv6 addresses, domains, URLs, file hashes or email addresses. It also can't tell an IP address from text that merely looks like one: a version number such as `1.2.3.4` is a valid public address, so it would be looked up and use a request.
@@ -174,6 +201,9 @@ Report files are git-ignored.
 - **The LLM can be wrong.** The verdict and the deep-analysis assessment are suggestions based only on the data they were given. Validation guarantees that answers have the right shape and allowed values, not that the judgement is correct. An ATT&CK ID is checked for its format, not for whether it fits, and hunting queries may use fields your workspace doesn't have. That is why every reply is validated, every AI section is labelled, and a person still makes the call.
 - **Prompt injection is reduced, not ruled out.** Report comments and alerts are fenced off as data and every reply is validated, but a cleverly written comment could still sway what Gemini writes. The tool never acts on Gemini's output by itself.
 - **Free-tier rate limits.** AbuseIPDB and Gemini both limit free usage. When AbuseIPDB's limit is hit, the address is reported as `lookup failed: rate limit reached`. A Gemini error shows as `verdict failed: LLM call failed: <error type>`, or as an assessment error on the investigation page. The tool itself does not retry. The 50-address cap limits how much one run can use, but it does not guarantee a run stays within your quota.
+- **The ceiling and sessions live in memory.** Restarting the server (a free host that sleeps when idle will do this) resets the day's count and signs everyone out. AbuseIPDB's own daily limit is still the final stop.
+- **Sign-in is simple on purpose.** Shared logins without per-person limits, a lockout keyed on the address the hosting proxy reports (not yet checked on a real host), no password reset or two-step sign-in. Anyone with a login can spend the site's ceiling.
+- **Real data does not belong here.** Don't paste real company alerts into a hosted copy. On Google's unpaid Gemini tier, submitted content may be used to improve its products.
 - **Alert excerpts go to Google.** The deep analysis sends the alert parts that mention the IP, which can include usernames or hostnames on the same line. On Google's unpaid tier, its terms allow submitted content to be used to improve its products.
 - **Reserved and private addresses are skipped, not judged.** Documentation-range addresses such as `203.0.113.7` (RFC 5737) and private addresses such as `10.0.0.5` have no meaningful reputation, so the tool skips them as `not public` instead of spending a lookup. The flip side: an alert about internal hosts gets no verdict for those hosts, only a line in the summary.
 
@@ -187,4 +217,4 @@ Also worth knowing: the command line reads a fixed file name. Addresses are chec
 - **Web-grounded research:** use Gemini with Google Search for news and threat reporting about an IP, once a billed Gemini project is available.
 - **Quota and reliability:** cache recent lookups, retry with back-off when rate-limited, run lookups in parallel within the limits, and make the 50-address cap and the Gemini models settings.
 - **LLM controls:** record the model and prompt version with each verdict and assessment, and keep a set of known alerts to measure how often the AI agrees with analysts before trusting changes.
-- **Operations and access:** run the offline tests in CI, add logging that never includes keys, and hold keys in a secrets manager rather than environment variables. If the web page were ever shared beyond one machine, it would need real sign-in and a proper session store.
+- **Operations and access:** run the offline tests in CI, add logging that never includes keys, and hold keys in a secrets manager rather than environment variables. The web page now has simple sign-in for a small hosted copy; for real use it would need single sign-on, a persistent session and usage store, per-person limits and a production web server.
